@@ -13,6 +13,11 @@ from django.db import transaction
 from django.http import HttpResponse
 from rest_framework.parsers import FormParser, MultiPartParser
 from . import importers
+import logging
+
+from openai import APIError, RateLimitError
+
+from .ai import propose_transaction
 
 from .models import Account, Book, BookMember, JournalEntry, JournalLine
 from .permissions import IsOwnerOrReadOnly
@@ -608,4 +613,107 @@ class JournalEntryViewSet(
     def import_template(self, request, book_id=None):
         return _xlsx_response(
             importers.build_template("entries"), "journal_template.xlsx"
+        )
+
+    @action(detail=False, methods=["post"], url_path="ai-draft")
+    def ai_draft(self, request, book_id=None):
+        raw_text = request.data.get("raw_text", "").strip()
+
+        if not raw_text:
+            return Response(
+                {"raw_text": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(raw_text) > 2_000:
+            return Response(
+                {"raw_text": ["Keep raw_text under 2,000 characters."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        book = self.get_book()
+        if book.is_closed:
+            return Response(
+                {"detail": "This book is closed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        accounts = Account.objects.filter(book=book, is_active=True).order_by("code")
+        logger = logging.getLogger(__name__)
+
+        try:
+            proposal = propose_transaction(
+                raw_text=raw_text,
+                book=book,
+                accounts=accounts,
+            )
+        except RateLimitError as exc:
+            error_code = getattr(exc, "code", None)
+            request_id = getattr(exc, "request_id", None)
+
+            logger.warning(
+                "AI provider 429: code=%s request_id=%s message=%s",
+                error_code,
+                request_id,
+                str(exc),
+            )
+
+            quota_codes = {
+                "credit_balance_exhausted",
+                "organization_usage_limit_exceeded",
+                "organization_spend_limit_exceeded",
+                "project_spend_limit_exceeded",
+                "insufficient_quota",
+            }
+
+            if error_code in quota_codes:
+                return Response(
+                    {
+                        "detail": "AI usage is unavailable because the provider account has no remaining credits or has reached its spending limit.",
+                        "code": error_code,
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+            return Response(
+                {
+                    "detail": "The AI provider temporarily rate-limited this request. Please retry shortly.",
+                    "code": error_code,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        except APIError:
+            return Response(
+                {"detail": "Could not generate an AI draft right now."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        # Remove AI-only review fields before using your normal entry serializer.
+        entry_data = {
+            key: proposal[key] for key in ("date", "reference", "description", "lines")
+        }
+
+        serializer = JournalEntrySerializer(
+            data=entry_data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+
+        # Deliberately return a draft only—NO serializer.save().
+        return Response(
+            {
+                "raw_text": raw_text,
+                # Return the JSON-safe proposal, not validated_data (which contains
+                # Account model instances after DRF resolves the account IDs).
+                "draft": entry_data,
+                "confidence": proposal["confidence"],
+                "needs_review": proposal["needs_review"],
+                "reason": proposal["reason"],
+            }
         )
