@@ -8,25 +8,51 @@ Officers create books, define a chart of accounts, and record balanced journal
 entries. Ledgers, trial balance, cash flow, and profit and loss reports are
 calculated from those entries, so the reports stay consistent.
 
-## Highlights
+## What problems it solves
 
-- Double-entry journal entries with debit/credit balance validation.
-- Books with optional financial periods and an irreversible closed state.
-- Per-book chart of accounts: asset, liability, equity, income, and expense.
-- Owner-only write access and optional read-only book sharing.
-- Ledgers, trial balance, cash flow, and profit and loss reports.
-- Excel import and downloadable templates for accounts and journal entries.
-- AI-assisted transaction drafts from English, Urdu, or Roman Urdu text.
+1. **Manual entry work is automated.** Record a transaction once in the journal. The ledger, trial balance, cash flow report and profit and loss statement are calculated from it, and they can never disagree with each other.
+2. **Bulk entry through Excel.** Upload a spreadsheet of journal entries instead of typing them one by one, with a dry-run mode to validate before saving.
+3. **Chart of accounts setup.** Add accounts one at a time, in bulk through JSON, or by Excel upload.
+4. **AI-assisted entry from plain text.** Describe a transaction in plain language (e.g. *"Paid Rs 3,500 cash for office stationery today"*) and get back a ready-made, correctly classified debit/credit journal entry matched against your own chart of accounts, for you to review and post.
 
-## Accounting and access rules
+---
 
-- Every journal entry must balance: total debits equal total credits.
-- A line has one positive side only: debit or credit.
-- Monetary values use Django `DecimalField`, never floating-point values.
-- A journal line can use only an account in the selected book.
-- Entries cannot be added to a closed book or outside its configured period.
-- Posted entries are append-only: they cannot be edited or deleted.
-- The book owner can write; shared officers can read but receive `403` on writes.
+## Features
+
+| Area | What you get |
+|---|---|
+| Authentication | Register, login (JWT), refresh, logout, change password, profile |
+| Books | Each officer opens their own books, with an optional financial period and closing |
+| Sharing | The owner can give other officers **read-only** access to a book |
+| Chart of accounts | Asset, liability, equity, income and expense accounts, unique code per book |
+| Journal entries | Balanced debit/credit entries with narration, sequential voucher numbers per book |
+| Ledger | Per-account ledger with running balance and date filters, or all ledgers at once |
+| Trial balance | Debit and credit totals per account with a balanced check |
+| Cash flow | Cash and bank receipts and payments, opening and closing, with reconciliation |
+| Profit and loss | Income minus expenses on an accrual basis |
+| Excel import | Upload accounts and journal entries from `.xlsx`, with downloadable templates |
+| AI-assisted entry | Turn a plain-text transaction description into a suggested, balanced journal entry mapped to your own chart of accounts; nothing is saved until reviewed and posted |
+
+### Accounting rules enforced
+
+- Total debits must equal total credits in every entry
+- A line has either a debit or a credit, never both, and never a negative amount
+- Money uses `DecimalField` (never floats)
+- Posted entries cannot be edited or deleted (books are append-only)
+- Entries must fall inside the book's period and cannot be added to a closed book
+- A line can only use an account from the same book
+
+### Access rules
+
+| Person | Read book | Write | Manage sharing |
+|---|---|---|---|
+| Owner | Yes | Yes | Yes |
+| Officer the book is shared with | Yes | No (403) | No (404) |
+| Any other officer | 404 | 404 | 404 |
+
+Roles: `officer` (default) and `admin` (manages users).
+
+---
 
 ## Requirements
 
