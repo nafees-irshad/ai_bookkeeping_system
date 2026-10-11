@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #f8fafc;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Gabarito Variable";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-outfit: "Gabarito Variable";
+  --font-gabarito: "Gabarito Variable";
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+aside[data-menu="true"],
+main[data-main-scroll="true"] {
+  scrollbar-color: rgb(148 163 184 / 45%) transparent;
+  scrollbar-width: thin;
+}
+
+aside[data-menu="true"]::-webkit-scrollbar,
+main[data-main-scroll="true"]::-webkit-scrollbar {
+  width: 8px;
+}
+
+aside[data-menu="true"]::-webkit-scrollbar-track,
+main[data-main-scroll="true"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside[data-menu="true"]::-webkit-scrollbar-thumb,
+main[data-main-scroll="true"]::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: rgb(148 163 184 / 45%);
+  background-clip: content-box;
+}
+
+aside[data-menu="true"]::-webkit-scrollbar-thumb:hover,
+main[data-main-scroll="true"]::-webkit-scrollbar-thumb:hover {
+  background: rgb(148 163 184 / 75%);
+  background-clip: content-box;
+}
+
+aside[data-menu="true"]::-webkit-scrollbar-button,
+main[data-main-scroll="true"]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.dark aside[data-menu="true"],
+.dark main[data-main-scroll="true"] {
+  scrollbar-color: rgb(113 113 122 / 55%) transparent;
+}
+
+.dark aside[data-menu="true"]::-webkit-scrollbar-thumb,
+.dark main[data-main-scroll="true"]::-webkit-scrollbar-thumb {
+  background: rgb(113 113 122 / 55%);
+  background-clip: content-box;
+}
+
+.dark aside[data-menu="true"]::-webkit-scrollbar-thumb:hover,
+.dark main[data-main-scroll="true"]::-webkit-scrollbar-thumb:hover {
+  background: rgb(161 161 170 / 75%);
+  background-clip: content-box;
+}
+
+/* Font utility classes */
+.font-gabarito {
+  font-family: var(--font-gabarito), system-ui, sans-serif;
+}
+
+.font-outfit {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+}
+
+/* Apply Gabarito to all headings outside navbar and menu */
+body :is(h1, h2, h3, h4, h5, h6, [role="heading"], .heading):not(:is(header, aside, nav, [data-navbar], [data-menu], [data-navbar] *, [data-menu] *)) {
+  font-family: var(--font-gabarito), system-ui, sans-serif;
+}
+
+/* Apply Gabarito to all subtext outside navbar and menu */
+body :is(
+  .subtext,
+  .subtitle,
+  [data-subtext],
+  h1 + p,
+  h2 + p,
+  h3 + p,
+  h4 + p,
+  h5 + p,
+  h6 + p
+):not(:is(header, aside, nav, [data-navbar], [data-menu], [data-navbar] *, [data-menu] *)) {
+  font-family: var(--font-gabarito), system-ui, sans-serif;
+}
+
+/* Explicit exemption for navbar and menu (keeps Outfit font) */
+header,
+header *,
+aside,
+aside *,
+nav,
+nav *,
+[data-navbar],
+[data-navbar] *,
+[data-menu],
+[data-menu] * {
+  font-family: var(--font-outfit), var(--font-sans), system-ui, sans-serif;
+}

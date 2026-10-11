@@ -1,15 +1,20 @@
-.env
+@"
+# Python
 .venv/
-venv/
-
 __pycache__/
-*.py[cod]
+*.pyc
 
-db.sqlite3
+# Node
+node_modules/
+.next/
+dist/
+build/
 
-.pytest_cache/
-.coverage
-htmlcov/
-
+# Secrets and local files
+.env
+.env.*
+*.sqlite3
+*.db
+.DS_Store
 .vscode/
-*.log
+"@ | Out-File -Encoding utf8 .gitignore
