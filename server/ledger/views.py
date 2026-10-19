@@ -18,7 +18,7 @@ from .serializers import (
     BookSerializer,
     JournalEntrySerializer,
 )
-from .services import accounts, imports, journals, reports
+from .services import accounts, imports, journals, reports, exports
 from .ai_service.drafts import generate_draft
 from .ai_service.fallback import AllModelsFailed
 
@@ -171,6 +171,60 @@ class AccountViewSet(BookScopedMixin, viewsets.ModelViewSet):
             importers.build_template("accounts"), "accounts_template.xlsx"
         )
 
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="export-ledgers",
+    )
+    def export_all_ledgers(self, request, book_id=None):
+        fmt = request.query_params.get("file_type", "xlsx").lower()
+
+        if fmt not in ("csv", "xlsx"):
+            raise ValidationError({"format": "Use csv or xlsx."})
+
+        date_from = parse_date_param(request, "from")
+        date_to = parse_date_param(request, "to")
+
+        if date_from and date_to and date_from > date_to:
+            raise ValidationError({"detail": "From date must not exceed to date."})
+
+        return exports.export_ledgers(
+            book=self.get_book(),
+            fmt=fmt,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="export-ledger",
+    )
+    def export_single_ledger(self, request, book_id=None, pk=None):
+        fmt = request.query_params.get("format", "xlsx").lower()
+
+        if fmt not in ("csv", "xlsx"):
+            raise ValidationError({"format": "Use csv or xlsx."})
+
+        date_from = parse_date_param(request, "from")
+        date_to = parse_date_param(request, "to")
+
+        if date_from and date_to and date_from > date_to:
+            raise ValidationError({"detail": "From date must not exceed to date."})
+
+        book = self.get_book()
+
+        # Accounts are globally shared.
+        account = self.get_object()
+
+        return exports.export_ledgers(
+            book=book,
+            fmt=fmt,
+            account=account,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
 
 class JournalEntryViewSet(
     BookScopedMixin,
@@ -287,3 +341,27 @@ class JournalEntryViewSet(
                 {"detail": str(exc)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="export",
+    )
+    def export_entries(self, request, book_id=None):
+        fmt = request.query_params.get("file_type", "xlsx").lower()
+
+        if fmt not in ("csv", "xlsx"):
+            raise ValidationError({"format": "Use csv or xlsx."})
+
+        date_from = parse_date_param(request, "from")
+        date_to = parse_date_param(request, "to")
+
+        if date_from and date_to and date_from > date_to:
+            raise ValidationError({"detail": "From date must not exceed to date."})
+
+        return exports.export_journals(
+            book=self.get_book(),
+            fmt=fmt,
+            date_from=date_from,
+            date_to=date_to,
+        )

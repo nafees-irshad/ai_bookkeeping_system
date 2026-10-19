@@ -27,6 +27,16 @@ export const ENDPOINTS = {
 
         ALL_LEDGERS: (bookId: number) =>
             `/books/${bookId}/accounts/ledgers/`,
+        EXPORT_ALL_LEDGERS: (bookId: number, fileType: "csv" | "xlsx") =>
+            `/books/${bookId}/accounts/export-ledgers/?file_type=${fileType}`,
+        EXPORT_LEDGER: (
+            bookId: number,
+            accountId: number,
+            fileType: "csv" | "xlsx",
+        ) =>
+            `/books/${bookId}/accounts/${accountId}/export-ledger/?file_type=${fileType}`,
+        TRIAL_BALANCE: (bookId: number) =>
+            `/books/${bookId}/accounts/trial-balance/`,
     },
     JOURNAL_ENTRIES: {
         CREATE: (bookId: number) => `/books/${bookId}/journal-entries/`,
@@ -41,5 +51,7 @@ export const ENDPOINTS = {
             `/books/${bookId}/journal-entries/import-template/`,
         IMPORT: (bookId: number) =>
             `/books/${bookId}/journal-entries/import/`,
+        EXPORT: (bookId: number, fileType: "csv" | "xlsx") =>
+            `/books/${bookId}/journal-entries/export/?file_type=${fileType}`,
     },
 };

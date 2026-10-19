@@ -31,3 +31,31 @@ export async function getAllLedgers(
         token,
     });
 }
+
+export async function exportAllLedgers(
+    bookId: number,
+    fileType: "csv" | "xlsx",
+    token: string,
+): Promise<Blob> {
+    return api<Blob>(ENDPOINTS.ACCOUNTS.EXPORT_ALL_LEDGERS(bookId, fileType), {
+        method: "GET",
+        token,
+        responseType: "blob",
+    });
+}
+
+export async function exportLedger(
+    bookId: number,
+    accountId: number,
+    fileType: "csv" | "xlsx",
+    token: string,
+): Promise<Blob> {
+    return api<Blob>(
+        ENDPOINTS.ACCOUNTS.EXPORT_LEDGER(bookId, accountId, fileType),
+        {
+            method: "GET",
+            token,
+            responseType: "blob",
+        },
+    );
+}

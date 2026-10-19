@@ -132,6 +132,18 @@ export async function downloadJournalEntriesTemplate(
     });
 }
 
+export async function exportJournalEntries(
+    bookId: number,
+    fileType: "csv" | "xlsx",
+    token: string,
+): Promise<Blob> {
+    return api<Blob>(ENDPOINTS.JOURNAL_ENTRIES.EXPORT(bookId, fileType), {
+        method: "GET",
+        token,
+        responseType: "blob",
+    });
+}
+
 export async function importJournalEntries(
     bookId: number,
     file: File,

@@ -5,11 +5,15 @@ import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAllLedgers,
+  exportAllLedgers,
   type AccountLedger,
 } from "@/lib/api/ledgersApi";
+import { getBookChartOfAccounts } from "@/lib/api/chartsOfAccountApi";
 import { getAccessToken } from "@/lib/auth/tokens";
 import { resolveActiveBook } from "@/lib/books/activeBook";
 import type { Book } from "@/lib/api/booksApi";
+import ExportFileDropdown from "@/components/export-file-dropdown";
+import ExportLedgerDropdown from "./export-ledger-dropdown";
 
 function toCents(amount: number) {
   return Math.round(amount * 100);
@@ -29,9 +33,13 @@ function typeLabel(type: string) {
 function TAccountCard({
   ledger,
   currency,
+  bookId,
+  accountId,
 }: {
   ledger: AccountLedger;
   currency: string;
+  bookId: number | null;
+  accountId: number | null;
 }) {
   const creditNormal = ["liability", "equity", "income", "revenue"].includes(
     ledger.type.toLowerCase(),
@@ -107,22 +115,25 @@ function TAccountCard({
   const sideRowCount = Math.max(debitSideRows.length, creditSideRows.length);
 
   return (
-    <details className="group h-fit overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <details className="group h-fit rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
-            {ledger.code}
-          </span>
-          <div className="min-w-0">
-            <h2 className="truncate font-bold text-slate-900 dark:text-zinc-100">
-              {ledger.name}
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-              {typeLabel(ledger.type)} · {ledger.rows.length} {ledger.rows.length === 1 ? "transaction" : "transactions"}
-            </p>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+              {ledger.code}
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate font-bold text-slate-900 dark:text-zinc-100">
+                {ledger.name}
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+                {typeLabel(ledger.type)} · {ledger.rows.length} {ledger.rows.length === 1 ? "transaction" : "transactions"}
+              </p>
+            </div>
           </div>
+          <ExportLedgerDropdown bookId={bookId} accountId={accountId} />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <div className="text-right">
             <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Closing balance</p>
             <p className="mt-0.5 font-bold tabular-nums text-slate-900 dark:text-zinc-100">
@@ -181,6 +192,7 @@ export default function AllLedgers() {
   const router = useRouter();
   const [book, setBook] = useState<Book | null>(null);
   const [ledgers, setLedgers] = useState<AccountLedger[]>([]);
+  const [accountIdsByCode, setAccountIdsByCode] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
   const [accountType, setAccountType] = useState("all");
   const [view, setView] = useState<"list" | "grid">("list");
@@ -201,15 +213,25 @@ export default function AllLedgers() {
       if (!activeBook) {
         setBook(null);
         setLedgers([]);
+        setAccountIdsByCode({});
         setError("Create or select a book before viewing ledgers.");
         return;
       }
       setBook(activeBook);
-      const result = await getAllLedgers(activeBook.id, token);
+      const [result, accounts] = await Promise.all([
+        getAllLedgers(activeBook.id, token),
+        getBookChartOfAccounts(activeBook.id, token),
+      ]);
       if (!Array.isArray(result)) {
         throw new Error("The server returned an invalid ledger response.");
       }
       setLedgers(result);
+      setAccountIdsByCode(
+        accounts.reduce<Record<string, number>>((accountIds, account) => {
+          accountIds[account.code] = account.id;
+          return accountIds;
+        }, {}),
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load ledgers.");
     } finally {
@@ -288,6 +310,12 @@ export default function AllLedgers() {
                 Filter accounts or change how they are displayed.
               </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+            <ExportFileDropdown
+              bookId={book?.id ?? null}
+              fileName="all_ledgers"
+              onExport={exportAllLedgers}
+            />
             <div className="inline-flex rounded-lg border border-slate-200 p-1 dark:border-zinc-700">
               <button
                 type="button"
@@ -321,6 +349,7 @@ export default function AllLedgers() {
                 </svg>
                 Grid
               </button>
+            </div>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto]">
@@ -432,27 +461,35 @@ export default function AllLedgers() {
                 key={ledger.code}
                 ledger={ledger}
                 currency={book?.currency ?? ""}
+                bookId={book?.id ?? null}
+                accountId={accountIdsByCode[ledger.code] ?? null}
               />
             ) : (
               <details
                 key={ledger.code}
-                className="group h-fit overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                className="group h-fit rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
               >
                 <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
-                      {ledger.code}
-                    </span>
-                    <div className="min-w-0">
-                      <h2 className="truncate font-bold text-slate-900 dark:text-zinc-100">
-                        {ledger.name}
-                      </h2>
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
-                        {typeLabel(ledger.type)} · {ledger.rows.length} {ledger.rows.length === 1 ? "transaction" : "transactions"}
-                      </p>
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+                        {ledger.code}
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="truncate font-bold text-slate-900 dark:text-zinc-100">
+                          {ledger.name}
+                        </h2>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+                          {typeLabel(ledger.type)} · {ledger.rows.length} {ledger.rows.length === 1 ? "transaction" : "transactions"}
+                        </p>
+                      </div>
                     </div>
+                    <ExportLedgerDropdown
+                      bookId={book?.id ?? null}
+                      accountId={accountIdsByCode[ledger.code] ?? null}
+                    />
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-end gap-3">
                     <div className="text-right">
                       <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Closing balance</p>
                       <p className="mt-0.5 font-bold tabular-nums text-slate-900 dark:text-zinc-100">

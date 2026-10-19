@@ -8,6 +8,7 @@ import {
   type JournalEntry,
   type JournalEntriesResponse,
 } from "@/lib/api/journalEntriesApi";
+import ExportJournalEntries from "./export-journal-entries";
 import { getAccessToken } from "@/lib/auth/tokens";
 import { resolveActiveBook } from "@/lib/books/activeBook";
 import type { Book } from "@/lib/api/booksApi";
@@ -85,9 +86,12 @@ export default function JournalEntriesList() {
             Review posted transactions{book ? ` in ${book.name}` : ""}.
           </p>
         </div>
-        <Link href="/journal/new" className="rounded-lg bg-[#6537eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5629da]">
-          + New journal entry
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportJournalEntries book={book} />
+          <Link href="/journal/new" className="rounded-lg bg-[#6537eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5629da]">
+            + New journal entry
+          </Link>
+        </div>
       </div>
 
       {error && (

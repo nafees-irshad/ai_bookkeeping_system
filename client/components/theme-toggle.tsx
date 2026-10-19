@@ -13,7 +13,7 @@ export default function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="h-9 w-9 rounded-xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+      <div className="h-10 w-10 rounded-xl border border-slate-200/80 bg-white dark:border-white/5 dark:bg-[#211f29]" />
     );
   }
 
@@ -21,7 +21,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 shadow-xs transition-all hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+      className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-white/5 dark:bg-[#211f29] dark:text-zinc-400 dark:hover:bg-[#2b2935] dark:hover:text-zinc-100"
       title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
       aria-label="Toggle theme"
     >
