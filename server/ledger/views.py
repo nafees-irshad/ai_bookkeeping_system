@@ -1,4 +1,5 @@
 """HTTP endpoints only. Business operations live in services and ai_service."""
+
 import logging
 from openai import APIError, RateLimitError
 from rest_framework import mixins, status, viewsets
@@ -11,11 +12,18 @@ from . import importers
 from .common import BookScopedMixin, parse_date_param, visible_books, xlsx_response
 from .models import Account, BookMember, JournalEntry
 from .permissions import IsAccountCreatorOrReadOnly, IsOwnerOrReadOnly
-from .serializers import AccountSerializer, BookMemberSerializer, BookSerializer, JournalEntrySerializer
+from .serializers import (
+    AccountSerializer,
+    BookMemberSerializer,
+    BookSerializer,
+    JournalEntrySerializer,
+)
 from .services import accounts, imports, journals, reports
 from .ai_service.drafts import generate_draft
+from .ai_service.fallback import AllModelsFailed
 
 logger = logging.getLogger(__name__)
+
 
 class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
@@ -28,7 +36,14 @@ class BookViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-class MemberViewSet(BookScopedMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+
+class MemberViewSet(
+    BookScopedMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     owner_only = True
     serializer_class = BookMemberSerializer
     permission_classes = [IsAuthenticated]
@@ -38,6 +53,7 @@ class MemberViewSet(BookScopedMixin, mixins.CreateModelMixin, mixins.ListModelMi
 
     def perform_create(self, serializer):
         serializer.save(book=self.get_book())
+
 
 class AccountViewSet(BookScopedMixin, viewsets.ModelViewSet):
     serializer_class = AccountSerializer
@@ -62,87 +78,212 @@ class AccountViewSet(BookScopedMixin, viewsets.ModelViewSet):
     def ledger(self, request, book_id=None, pk=None):
         account = self.get_object()
         data = reports.account_ledger(
-            account=account, book=self.get_book(),
+            account=account,
+            book=self.get_book(),
             date_from=parse_date_param(request, "from"),
             date_to=parse_date_param(request, "to"),
         )
-        data["account"] = AccountSerializer(account, context=self.get_serializer_context()).data
+        data["account"] = AccountSerializer(
+            account, context=self.get_serializer_context()
+        ).data
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path="trial-balance")
     def trial_balance(self, request, book_id=None):
-        return Response(reports.trial_balance(book=self.get_book(), date_to=parse_date_param(request, "to")))
+        return Response(
+            reports.trial_balance(
+                book=self.get_book(), date_to=parse_date_param(request, "to")
+            )
+        )
 
     @action(detail=False, methods=["post"], url_path="bulk")
     def bulk_create_accounts(self, request, book_id=None):
-        created = accounts.create_accounts(items=request.data, context=self.get_serializer_context())
-        return Response(AccountSerializer(created, many=True, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
+        created = accounts.create_accounts(
+            items=request.data, context=self.get_serializer_context()
+        )
+        return Response(
+            AccountSerializer(
+                created, many=True, context=self.get_serializer_context()
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=["get"], url_path="ledgers")
     def all_ledgers(self, request, book_id=None):
-        return Response(reports.all_ledgers(book=self.get_book(), date_from=parse_date_param(request, "from"), date_to=parse_date_param(request, "to")))
+        return Response(
+            reports.all_ledgers(
+                book=self.get_book(),
+                date_from=parse_date_param(request, "from"),
+                date_to=parse_date_param(request, "to"),
+            )
+        )
 
     @action(detail=False, methods=["get"], url_path="cash-flow")
     def cash_flow(self, request, book_id=None):
-        return Response(reports.cash_flow(book=self.get_book(), date_from=parse_date_param(request, "from"), date_to=parse_date_param(request, "to")))
+        return Response(
+            reports.cash_flow(
+                book=self.get_book(),
+                date_from=parse_date_param(request, "from"),
+                date_to=parse_date_param(request, "to"),
+            )
+        )
 
     @action(detail=False, methods=["get"], url_path="profit-loss")
     def profit_loss(self, request, book_id=None):
-        return Response(reports.profit_loss(book=self.get_book(), date_from=parse_date_param(request, "from"), date_to=parse_date_param(request, "to")))
+        return Response(
+            reports.profit_loss(
+                book=self.get_book(),
+                date_from=parse_date_param(request, "from"),
+                date_to=parse_date_param(request, "to"),
+            )
+        )
 
-    @action(detail=False, methods=["post"], url_path="import", parser_classes=[MultiPartParser, FormParser])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="import",
+        parser_classes=[MultiPartParser, FormParser],
+    )
     def import_excel(self, request, book_id=None):
         try:
             file = importers.get_uploaded_file(request)
         except importers.ExcelFormatError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
-        result = imports.import_accounts(uploaded_file=file, context=self.get_serializer_context(), dry_run=request.query_params.get("dry_run") == "true")
+        result = imports.import_accounts(
+            uploaded_file=file,
+            context=self.get_serializer_context(),
+            dry_run=request.query_params.get("dry_run") == "true",
+        )
         if "imported" in result:
-            result["accounts"] = AccountSerializer(result["accounts"], many=True, context=self.get_serializer_context()).data
-        return Response(result, status=status.HTTP_201_CREATED if "imported" in result else status.HTTP_200_OK)
+            result["accounts"] = AccountSerializer(
+                result["accounts"], many=True, context=self.get_serializer_context()
+            ).data
+        return Response(
+            result,
+            status=(
+                status.HTTP_201_CREATED if "imported" in result else status.HTTP_200_OK
+            ),
+        )
 
     @action(detail=False, methods=["get"], url_path="import-template")
     def import_template(self, request, book_id=None):
-        return xlsx_response(importers.build_template("accounts"), "accounts_template.xlsx")
+        return xlsx_response(
+            importers.build_template("accounts"), "accounts_template.xlsx"
+        )
 
-class JournalEntryViewSet(BookScopedMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+
+class JournalEntryViewSet(
+    BookScopedMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = JournalEntrySerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        return JournalEntry.objects.filter(book=self.get_book()).prefetch_related("lines__account")
+        return JournalEntry.objects.filter(book=self.get_book()).prefetch_related(
+            "lines__account"
+        )
 
     @action(detail=False, methods=["post"], url_path="bulk")
     def bulk_create_entries(self, request, book_id=None):
-        saved = journals.create_entries(items=request.data, context=self.get_serializer_context())
-        return Response(JournalEntrySerializer(saved, many=True, context=self.get_serializer_context()).data, status=status.HTTP_201_CREATED)
+        data = request.data
 
-    @action(detail=False, methods=["post"], url_path="import", parser_classes=[MultiPartParser, FormParser])
+        # Accept one entry or multiple entries
+        if isinstance(data, dict):
+            entries = [data]
+
+        elif isinstance(data, list):
+            entries = data
+
+        else:
+            return Response(
+                {
+                    "detail": (
+                        "Send a journal entry object " "or a list of journal entries."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not entries:
+            return Response(
+                {"detail": "At least one entry is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ctx = self.get_serializer_context()
+
+        # Correct service module: journals
+        results = journals.bulk_create_entries(
+            entries,
+            ctx,
+        )
+
+        return Response(
+            JournalEntrySerializer(
+                results,
+                many=True,
+                context=ctx,
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="import",
+        parser_classes=[MultiPartParser, FormParser],
+    )
     def import_excel(self, request, book_id=None):
         try:
             file = importers.get_uploaded_file(request)
         except importers.ExcelFormatError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
-        result = imports.import_journals(uploaded_file=file, context=self.get_serializer_context(), dry_run=request.query_params.get("dry_run") == "true")
+        result = imports.import_journals(
+            uploaded_file=file,
+            context=self.get_serializer_context(),
+            dry_run=request.query_params.get("dry_run") == "true",
+        )
         if "imported" in result:
-            result["entries"] = JournalEntrySerializer(result["entries"], many=True, context=self.get_serializer_context()).data
-        return Response(result, status=status.HTTP_201_CREATED if "imported" in result else status.HTTP_200_OK)
+            result["entries"] = JournalEntrySerializer(
+                result["entries"], many=True, context=self.get_serializer_context()
+            ).data
+        return Response(
+            result,
+            status=(
+                status.HTTP_201_CREATED if "imported" in result else status.HTTP_200_OK
+            ),
+        )
 
     @action(detail=False, methods=["get"], url_path="import-template")
     def import_template(self, request, book_id=None):
-        return xlsx_response(importers.build_template("entries"), "journal_template.xlsx")
+        return xlsx_response(
+            importers.build_template("entries"), "journal_template.xlsx"
+        )
 
-    @action(detail=False, methods=["post"], url_path="ai-draft")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="ai-draft",
+    )
     def ai_draft(self, request, book_id=None):
         try:
-            return Response(generate_draft(raw_text=request.data.get("raw_text", ""), book=self.get_book(), context=self.get_serializer_context()))
-        except RateLimitError as exc:
-            code = getattr(exc, "code", None)
-            logger.warning("AI provider 429: code=%s request_id=%s", code, getattr(exc, "request_id", None))
-            if code in {"credit_balance_exhausted", "organization_usage_limit_exceeded", "organization_spend_limit_exceeded", "project_spend_limit_exceeded", "insufficient_quota"}:
-                return Response({"detail": "AI usage is unavailable because the provider account has no remaining credits or has reached its spending limit.", "code": code}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-            return Response({"detail": "The AI provider temporarily rate-limited this request. Please retry shortly.", "code": code}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-        except APIError:
-            return Response({"detail": "Could not generate an AI draft right now."}, status=status.HTTP_502_BAD_GATEWAY)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            result = generate_draft(
+                raw_text=request.data.get("raw_text", ""),
+                book=self.get_book(),
+                context=self.get_serializer_context(),
+            )
+
+            return Response(
+                result,
+                status=status.HTTP_200_OK,
+            )
+
+        except AllModelsFailed as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )

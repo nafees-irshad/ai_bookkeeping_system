@@ -73,6 +73,33 @@ export async function getAllChartOfAccounts(
     );
 }
 
+export async function getBookChartOfAccounts(
+    bookId: number,
+    token: string,
+): Promise<ChartOfAccount[]> {
+    const accounts: ChartOfAccount[] = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+        const response = await api<PaginatedAccountsResponse | ChartOfAccount[]>(
+            ENDPOINTS.ACCOUNTS.GET_CHART_OF_ACCOUNTS(bookId, page),
+            { method: "GET", token },
+        );
+
+        if (Array.isArray(response)) {
+            accounts.push(...response);
+            hasMore = false;
+        } else {
+            accounts.push(...response.results);
+            hasMore = response.next !== null;
+            page += 1;
+        }
+    }
+
+    return accounts;
+}
+
 export async function getChartOfAccount(
     bookId: number,
     accountId: number,

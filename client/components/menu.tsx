@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth/auth-context";
 
 interface SubMenuItem {
   title: string;
@@ -20,6 +21,7 @@ interface MenuItem {
 
 export default function Menu() {
   const pathname = usePathname();
+  const { logout, isAuthenticating } = useAuth();
 
   // State to track which collapsible menus are open
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -370,7 +372,9 @@ export default function Menu() {
       <div className="pt-4 mt-4 border-t border-slate-200/70 dark:border-zinc-800">
         <button
           type="button"
-          className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-rose-50 hover:text-rose-600 dark:text-zinc-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+          onClick={() => void logout()}
+          disabled={isAuthenticating}
+          className="group flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-rose-50 hover:text-rose-600 disabled:cursor-wait disabled:opacity-60 dark:text-zinc-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
         >
           <span className="text-slate-500 group-hover:text-rose-600 dark:text-zinc-400 dark:group-hover:text-rose-400">
             <svg
@@ -388,7 +392,7 @@ export default function Menu() {
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </span>
-          <span>Logout</span>
+          <span>{isAuthenticating ? "Logging out..." : "Logout"}</span>
         </button>
       </div>
     </aside>

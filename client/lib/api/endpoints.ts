@@ -24,5 +24,22 @@ export const ENDPOINTS = {
 
         UPDATE_CHART_OF_ACCOUNT: (bookId: number, accountId: number) =>
             `/books/${bookId}/accounts/${accountId}/`,
+
+        ALL_LEDGERS: (bookId: number) =>
+            `/books/${bookId}/accounts/ledgers/`,
+    },
+    JOURNAL_ENTRIES: {
+        CREATE: (bookId: number) => `/books/${bookId}/journal-entries/`,
+        LIST: (bookId: number, page = 1) =>
+            `/books/${bookId}/journal-entries/?page=${page}`,
+        DETAIL: (bookId: number, entryId: number) =>
+            `/books/${bookId}/journal-entries/${entryId}/`,
+        BULK: (bookId: number) => `/books/${bookId}/journal-entries/bulk/`,
+        AI_DRAFT: (bookId: number) =>
+            `/books/${bookId}/journal-entries/ai-draft/`,
+        IMPORT_TEMPLATE: (bookId: number) =>
+            `/books/${bookId}/journal-entries/import-template/`,
+        IMPORT: (bookId: number) =>
+            `/books/${bookId}/journal-entries/import/`,
     },
 };

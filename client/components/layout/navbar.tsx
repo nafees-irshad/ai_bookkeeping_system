@@ -4,9 +4,11 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import ThemeToggle from "@/components/theme-toggle";
+import { useAuth } from "@/lib/auth/auth-context";
 
 export default function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false);
+  const { logout, isAuthenticating } = useAuth();
 
   return (
     <header
@@ -91,7 +93,9 @@ export default function Navbar() {
           {/* Logout Button */}
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500/20 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-rose-900/50 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+            onClick={() => void logout()}
+            disabled={isAuthenticating}
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200/80 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500/20 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-rose-900/50 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
             title="Log out"
             aria-label="Log out"
           >
@@ -109,7 +113,7 @@ export default function Navbar() {
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline">{isAuthenticating ? "Logging out..." : "Logout"}</span>
           </button>
         </div>
       </div>
