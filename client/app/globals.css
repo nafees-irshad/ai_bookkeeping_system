@@ -28,23 +28,19 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-aside[data-menu="true"],
 main[data-main-scroll="true"] {
   scrollbar-color: rgb(148 163 184 / 45%) transparent;
   scrollbar-width: thin;
 }
 
-aside[data-menu="true"]::-webkit-scrollbar,
 main[data-main-scroll="true"]::-webkit-scrollbar {
   width: 8px;
 }
 
-aside[data-menu="true"]::-webkit-scrollbar-track,
 main[data-main-scroll="true"]::-webkit-scrollbar-track {
   background: transparent;
 }
 
-aside[data-menu="true"]::-webkit-scrollbar-thumb,
 main[data-main-scroll="true"]::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 9999px;
@@ -52,34 +48,41 @@ main[data-main-scroll="true"]::-webkit-scrollbar-thumb {
   background-clip: content-box;
 }
 
-aside[data-menu="true"]::-webkit-scrollbar-thumb:hover,
 main[data-main-scroll="true"]::-webkit-scrollbar-thumb:hover {
   background: rgb(148 163 184 / 75%);
   background-clip: content-box;
 }
 
-aside[data-menu="true"]::-webkit-scrollbar-button,
 main[data-main-scroll="true"]::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
 }
 
-.dark aside[data-menu="true"],
 .dark main[data-main-scroll="true"] {
   scrollbar-color: rgb(113 113 122 / 55%) transparent;
 }
 
-.dark aside[data-menu="true"]::-webkit-scrollbar-thumb,
 .dark main[data-main-scroll="true"]::-webkit-scrollbar-thumb {
   background: rgb(113 113 122 / 55%);
   background-clip: content-box;
 }
 
-.dark aside[data-menu="true"]::-webkit-scrollbar-thumb:hover,
 .dark main[data-main-scroll="true"]::-webkit-scrollbar-thumb:hover {
   background: rgb(161 161 170 / 75%);
   background-clip: content-box;
+}
+
+/* Hide scrollbar completely on sidebar menu */
+aside[data-menu="true"] {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+aside[data-menu="true"]::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Font utility classes */

@@ -8,7 +8,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 transition-colors dark:bg-zinc-900 dark:text-zinc-100">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">
       <Navbar />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <Menu />

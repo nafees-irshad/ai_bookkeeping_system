@@ -11,12 +11,12 @@ export default function Navbar() {
   return (
     <header
       data-navbar="true"
-      className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white/95 font-outfit backdrop-blur transition-colors supports-[backdrop-filter]:bg-white/80 dark:border-zinc-800 dark:bg-zinc-950/90 dark:supports-[backdrop-filter]:bg-zinc-950/80"
+      className="sticky top-0 z-50 w-full bg-white/95 font-outfit backdrop-blur transition-colors supports-[backdrop-filter]:bg-white/80 dark:bg-zinc-950/90 dark:supports-[backdrop-filter]:bg-zinc-950/80"
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="flex h-[52px] w-full items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-sm shadow-indigo-200 dark:shadow-none">
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-transparent" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-sm shadow-indigo-200 dark:shadow-none">
+            <div className="h-3 w-3 rounded-full border-2 border-white bg-transparent" />
           </div>
           <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
             Accu<span className="text-indigo-600 dark:text-indigo-400">Books</span>
